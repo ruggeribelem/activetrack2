@@ -1,0 +1,1013 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ActiveTrack - Seu Companheiro de Treino</title>
+    <link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@400;700&family=Orbitron:wght@500;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.7.1/dist/leaflet.css" />
+    <style>
+        :root {
+            --primary: #00c853;
+            --secondary: #1e88e5;
+            --dark: #121212;
+            --light: #f5f5f5;
+            --accent: #ffab00;
+        }
+        
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: 'Montserrat', sans-serif;
+            background-color: var(--dark);
+            color: var(--light);
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+            overflow-x: hidden;
+        }
+        
+        header {
+            background: linear-gradient(135deg, var(--dark), #1a1a1a);
+            padding: 1rem;
+            text-align: center;
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+            position: relative;
+            z-index: 10;
+        }
+        
+        h1 {
+            font-family: 'Orbitron', sans-serif;
+            color: var(--primary);
+            text-transform: uppercase;
+            letter-spacing: 2px;
+            font-size: 1.8rem;
+            margin-bottom: 0.5rem;
+            text-shadow: 0 0 10px rgba(0, 200, 83, 0.3);
+        }
+        
+        .tagline {
+            color: var(--secondary);
+            font-size: 0.9rem;
+            letter-spacing: 1px;
+        }
+        
+        .main-container {
+            display: flex;
+            flex-direction: column;
+            flex: 1;
+            padding: 1rem;
+        }
+        
+        .map-container {
+            height: 300px;
+            border-radius: 12px;
+            overflow: hidden;
+            box-shadow: 0 8px 20px rgba(0, 0, 0, 0.4);
+            margin-bottom: 1.5rem;
+            border: 2px solid var(--primary);
+            position: relative;
+        }
+        
+        #map {
+            height: 100%;
+            width: 100%;
+            background-color: var(--dark);
+        }
+        
+        .stats-container {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 1rem;
+            margin-bottom: 1.5rem;
+        }
+        
+        .stat-card {
+            background: linear-gradient(145deg, #1e1e1e, #252525);
+            border-radius: 10px;
+            padding: 1rem;
+            text-align: center;
+            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
+            border-left: 4px solid var(--primary);
+            transition: transform 0.3s;
+        }
+        
+        .stat-card:hover {
+            transform: translateY(-5px);
+        }
+        
+        .stat-value {
+            font-size: 1.8rem;
+            font-weight: 700;
+            color: var(--primary);
+            margin: 0.5rem 0;
+            font-family: 'Orbitron', sans-serif;
+        }
+        
+        .stat-label {
+            font-size: 0.8rem;
+            color: #aaa;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+        }
+        
+        .controls {
+            display: grid;
+            grid-template-columns: repeat(4, 1fr);
+            gap: 0.8rem;
+            margin-bottom: 1.5rem;
+        }
+        
+        .btn {
+            padding: 0.8rem;
+            border: none;
+            border-radius: 8px;
+            font-weight: 700;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            font-size: 0.8rem;
+            cursor: pointer;
+            transition: all 0.3s;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+        }
+        
+        .btn i {
+            margin-right: 5px;
+        }
+        
+        .btn-start {
+            background-color: var(--primary);
+            color: var(--dark);
+        }
+        
+        .btn-pause {
+            background-color: var(--accent);
+            color: var(--dark);
+        }
+        
+        .btn-reset {
+            background-color: #616161;
+            color: var(--light);
+        }
+        
+        .btn-stop {
+            background-color: #e53935;
+            color: var(--light);
+        }
+        
+        .btn-share {
+            background-color: #25D366;
+            color: var(--light);
+        }
+        
+        .btn:active {
+            transform: scale(0.95);
+        }
+        
+        .btn:disabled {
+            opacity: 0.6;
+            cursor: not-allowed;
+            transform: none;
+        }
+        
+        .activity-selector {
+            display: flex;
+            justify-content: center;
+            margin-bottom: 1.5rem;
+        }
+        
+        .activity-btn {
+            padding: 0.8rem 1.5rem;
+            border: none;
+            background-color: #333;
+            color: #aaa;
+            font-weight: 700;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            font-size: 0.8rem;
+            cursor: pointer;
+            transition: all 0.3s;
+        }
+        
+        .activity-btn:first-child {
+            border-radius: 8px 0 0 8px;
+        }
+        
+        .activity-btn:last-child {
+            border-radius: 0 8px 8px 0;
+        }
+        
+        .activity-btn.active {
+            background-color: var(--secondary);
+            color: var(--light);
+        }
+        
+        .path-info {
+            background: linear-gradient(145deg, #1e1e1e, #252525);
+            border-radius: 10px;
+            padding: 1rem;
+            margin-bottom: 1.5rem;
+            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
+        }
+        
+        .path-title {
+            color: var(--secondary);
+            font-size: 1rem;
+            margin-bottom: 0.5rem;
+            display: flex;
+            align-items: center;
+        }
+        
+        .path-details {
+            display: flex;
+            justify-content: space-between;
+            font-size: 0.9rem;
+            color: #aaa;
+        }
+        
+        .pulse {
+            animation: pulse 1.5s infinite;
+        }
+        
+        @keyframes pulse {
+            0% {
+                box-shadow: 0 0 0 0 rgba(0, 200, 83, 0.7);
+            }
+            70% {
+                box-shadow: 0 0 0 10px rgba(0, 200, 83, 0);
+            }
+            100% {
+                box-shadow: 0 0 0 0 rgba(0, 200, 83, 0);
+            }
+        }
+        
+        .gps-status {
+            position: absolute;
+            top: 10px;
+            right: 10px;
+            background-color: rgba(0, 0, 0, 0.7);
+            padding: 5px 10px;
+            border-radius: 20px;
+            font-size: 0.7rem;
+            display: flex;
+            align-items: center;
+            z-index: 1000;
+        }
+        
+        .gps-indicator {
+            width: 10px;
+            height: 10px;
+            border-radius: 50%;
+            margin-right: 5px;
+            background-color: #e53935;
+        }
+        
+        .gps-indicator.active {
+            background-color: var(--primary);
+            box-shadow: 0 0 10px var(--primary);
+        }
+        
+        footer {
+            text-align: center;
+            padding: 1rem;
+            font-size: 0.8rem;
+            color: #666;
+            background-color: #1a1a1a;
+        }
+        
+        .modal {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background-color: rgba(0, 0, 0, 0.8);
+            z-index: 1000;
+            justify-content: center;
+            align-items: center;
+        }
+        
+        .modal-content {
+            background-color: #1e1e1e;
+            border-radius: 12px;
+            padding: 1.5rem;
+            width: 90%;
+            max-width: 500px;
+            box-shadow: 0 10px 25px rgba(0, 0, 0, 0.5);
+            border: 2px solid var(--primary);
+        }
+        
+        .modal-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 1rem;
+            border-bottom: 1px solid #333;
+            padding-bottom: 0.5rem;
+        }
+        
+        .modal-title {
+            font-size: 1.3rem;
+            color: var(--primary);
+            font-weight: 700;
+        }
+        
+        .close-modal {
+            background: none;
+            border: none;
+            color: #aaa;
+            font-size: 1.5rem;
+            cursor: pointer;
+        }
+        
+        .modal-body {
+            margin-bottom: 1.5rem;
+        }
+        
+        .share-options {
+            display: flex;
+            flex-direction: column;
+            gap: 1rem;
+        }
+        
+        .share-input {
+            background-color: #252525;
+            border: 1px solid #333;
+            border-radius: 6px;
+            padding: 0.8rem;
+            color: var(--light);
+            font-family: inherit;
+            resize: none;
+            width: 100%;
+            height: 100px;
+        }
+        
+        .share-actions {
+            display: flex;
+            gap: 1rem;
+            justify-content: flex-end;
+        }
+        
+        .btn-cancel {
+            background-color: #616161;
+            color: var(--light);
+        }
+        
+        @media (min-width: 768px) {
+            .main-container {
+                max-width: 800px;
+                margin: 0 auto;
+                width: 100%;
+            }
+            
+            .map-container {
+                height: 400px;
+            }
+            
+            .stats-container {
+                grid-template-columns: repeat(4, 1fr);
+            }
+        }
+    </style>
+</head>
+<body>
+    <header>
+        <h1>ActiveTrack</h1>
+        <div class="tagline">Sua performance, seu progresso</div>
+    </header>
+    
+    <div class="main-container">
+        <div class="activity-selector">
+            <button class="activity-btn active" id="btn-run">🏃 Corrida</button>
+            <button class="activity-btn" id="btn-walk">🚶 Caminhada</button>
+        </div>
+        
+        <div class="map-container pulse" id="map-container">
+            <div class="gps-status">
+                <div class="gps-indicator" id="gps-indicator"></div>
+                <span id="gps-text">GPS desativado</span>
+            </div>
+            <div id="map"></div>
+        </div>
+        
+        <div class="stats-container">
+            <div class="stat-card">
+                <div class="stat-label">Distância</div>
+                <div class="stat-value" id="distance">0.00</div>
+                <div class="stat-label">km</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-label">Tempo</div>
+                <div class="stat-value" id="time">00:00:00</div>
+                <div class="stat-label">hh:mm:ss</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-label">Ritmo</div>
+                <div class="stat-value" id="pace">--:--</div>
+                <div class="stat-label">min/km</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-label">Velocidade</div>
+                <div class="stat-value" id="speed">0.0</div>
+                <div class="stat-label">km/h</div>
+            </div>
+        </div>
+        
+        <div class="path-info">
+            <div class="path-title">📌 Rota atual</div>
+            <div class="path-details">
+                <span id="path-start">Início: --:--:--</span>
+                <span id="path-points">Pontos: 0</span>
+            </div>
+        </div>
+        
+        <div class="controls">
+            <button class="btn btn-start" id="btn-start">
+                <i>▶</i> Iniciar
+            </button>
+            <button class="btn btn-pause" id="btn-pause" disabled>
+                <i>⏸</i> Pausar
+            </button>
+            <button class="btn btn-reset" id="btn-reset" disabled>
+                <i>↺</i> Zerar
+            </button>
+            <button class="btn btn-stop" id="btn-stop" disabled>
+                <i>⏹</i> Parar
+            </button>
+        </div>
+        
+        <button class="btn btn-share" id="btn-share" disabled>
+            <i>📤</i> Compartilhar no WhatsApp
+        </button>
+    </div>
+    
+    <div class="modal" id="share-modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <div class="modal-title">Compartilhar Atividade</div>
+                <button class="close-modal" id="close-modal">&times;</button>
+            </div>
+            <div class="modal-body">
+                <div class="share-options">
+                    <textarea class="share-input" id="share-message" readonly></textarea>
+                </div>
+            </div>
+            <div class="share-actions">
+                <button class="btn btn-cancel" id="btn-cancel-share">Cancelar</button>
+                <button class="btn btn-share" id="btn-confirm-share">
+                    <i>📤</i> Enviar
+                </button>
+            </div>
+        </div>
+    </div>
+    
+    <footer>
+        ActiveTrack © 2023 - Transforme cada movimento em progresso
+    </footer>
+
+    <script src="https://unpkg.com/leaflet@1.7.1/dist/leaflet.js"></script>
+    <script>
+        // Variáveis globais
+        let map;
+        let pathLayer;
+        let markersLayer;
+        let startMarker;
+        let currentPositionMarker;
+        let watchId = null;
+        let isTracking = false;
+        let isPaused = false;
+        let activityType = 'run';
+        let pathPoints = [];
+        let startTime = null;
+        let pauseTime = 0;
+        let totalPausedTime = 0;
+        let timerInterval = null;
+        let totalDistance = 0;
+        let staticMapUrl = '';
+        
+        // Elementos DOM
+        const btnStart = document.getElementById('btn-start');
+        const btnPause = document.getElementById('btn-pause');
+        const btnReset = document.getElementById('btn-reset');
+        const btnStop = document.getElementById('btn-stop');
+        const btnRun = document.getElementById('btn-run');
+        const btnWalk = document.getElementById('btn-walk');
+        const btnShare = document.getElementById('btn-share');
+        const distanceElement = document.getElementById('distance');
+        const timeElement = document.getElementById('time');
+        const paceElement = document.getElementById('pace');
+        const speedElement = document.getElementById('speed');
+        const pathStartElement = document.getElementById('path-start');
+        const pathPointsElement = document.getElementById('path-points');
+        const gpsIndicator = document.getElementById('gps-indicator');
+        const gpsText = document.getElementById('gps-text');
+        const mapContainer = document.getElementById('map-container');
+        const shareModal = document.getElementById('share-modal');
+        const closeModal = document.getElementById('close-modal');
+        const btnCancelShare = document.getElementById('btn-cancel-share');
+        const btnConfirmShare = document.getElementById('btn-confirm-share');
+        const shareMessage = document.getElementById('share-message');
+        
+        // Inicializar o mapa
+        function initMap() {
+            map = L.map('map').setView([-15.7889, -47.8792], 15); // Coordenadas de Brasília como padrão
+            
+            L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+                attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors',
+                maxZoom: 19,
+            }).addTo(map);
+            
+            pathLayer = L.layerGroup().addTo(map);
+            markersLayer = L.layerGroup().addTo(map);
+        }
+        
+        // Atualizar a posição no mapa
+        function updatePosition(position) {
+            const { latitude, longitude, accuracy } = position.coords;
+            
+            // Atualizar status do GPS
+            gpsIndicator.classList.add('active');
+            gpsText.textContent = `GPS ativo (${accuracy.toFixed(0)}m)`;
+            
+            // Criar ou atualizar marcador de posição atual
+            if (!currentPositionMarker) {
+                currentPositionMarker = L.circleMarker([latitude, longitude], {
+                    radius: 8,
+                    fillColor: "#1e88e5",
+                    color: "#fff",
+                    weight: 2,
+                    opacity: 1,
+                    fillOpacity: 0.8
+                }).addTo(markersLayer);
+                
+                // Adicionar popup com informações
+                currentPositionMarker.bindPopup(`<b>Sua posição atual</b><br>Lat: ${latitude.toFixed(6)}<br>Lon: ${longitude.toFixed(6)}<br>Precisão: ${accuracy.toFixed(0)}m`).openPopup();
+                
+                // Centralizar o mapa na posição inicial
+                map.setView([latitude, longitude], 17);
+            } else {
+                currentPositionMarker.setLatLng([latitude, longitude]);
+                currentPositionMarker.setRadius(Math.max(8, accuracy / 5));
+            }
+            
+            // Se estiver rastreando, adicionar ponto ao caminho
+            if (isTracking && !isPaused) {
+                const timestamp = new Date(position.timestamp);
+                const newPoint = {
+                    lat: latitude,
+                    lng: longitude,
+                    accuracy: accuracy,
+                    timestamp: timestamp,
+                    speed: position.coords.speed || 0
+                };
+                
+                pathPoints.push(newPoint);
+                updatePath();
+                updateStats();
+                
+                // Atualizar contador de pontos
+                pathPointsElement.textContent = `Pontos: ${pathPoints.length}`;
+            }
+        }
+        
+        // Atualizar o caminho no mapa
+        function updatePath() {
+            // Remover camada anterior
+            pathLayer.clearLayers();
+            
+            // Desenhar nova linha com os pontos coletados
+            if (pathPoints.length > 1) {
+                const line = L.polyline(pathPoints.map(p => [p.lat, p.lng]), {
+                    color: activityType === 'run' ? '#00c853' : '#1e88e5',
+                    weight: 6,
+                    opacity: 0.8,
+                    lineJoin: 'round'
+                }).addTo(pathLayer);
+            }
+            
+            // Adicionar marcador de início se necessário
+            if (pathPoints.length > 0 && !startMarker) {
+                startMarker = L.circleMarker([pathPoints[0].lat, pathPoints[0].lng], {
+                    radius: 8,
+                    fillColor: "#ffab00",
+                    color: "#fff",
+                    weight: 2,
+                    opacity: 1,
+                    fillOpacity: 0.8
+                }).addTo(markersLayer);
+                
+                startMarker.bindPopup(`<b>Ponto de partida</b><br>${pathPoints[0].timestamp.toLocaleTimeString()}`);
+                
+                // Atualizar horário de início
+                pathStartElement.textContent = `Início: ${pathPoints[0].timestamp.toLocaleTimeString()}`;
+            }
+        }
+        
+        // Atualizar estatísticas
+        function updateStats() {
+            if (pathPoints.length < 2) return;
+            
+            // Calcular distância total
+            totalDistance = 0;
+            for (let i = 1; i < pathPoints.length; i++) {
+                totalDistance += calculateDistance(
+                    pathPoints[i-1].lat, pathPoints[i-1].lng,
+                    pathPoints[i].lat, pathPoints[i].lng
+                );
+            }
+            
+            // Atualizar UI
+            distanceElement.textContent = (totalDistance / 1000).toFixed(2);
+            
+            // Calcular velocidade (média dos últimos 5 pontos se disponível)
+            let speed = 0;
+            if (pathPoints.length >= 2) {
+                const lastPoint = pathPoints[pathPoints.length - 1];
+                const prevPoint = pathPoints[pathPoints.length - 2];
+                
+                const segmentDistance = calculateDistance(
+                    prevPoint.lat, prevPoint.lng,
+                    lastPoint.lat, lastPoint.lng
+                );
+                
+                const segmentTime = (lastPoint.timestamp - prevPoint.timestamp) / 1000; // em segundos
+                
+                if (segmentTime > 0) {
+                    speed = segmentDistance / segmentTime; // m/s
+                }
+            }
+            
+            speedElement.textContent = (speed * 3.6).toFixed(1); // converter para km/h
+            
+            // Calcular ritmo (min/km)
+            if (speed > 0) {
+                const paceValue = 16.6667 / speed; // min/km
+                const minutes = Math.floor(paceValue);
+                const seconds = Math.floor((paceValue - minutes) * 60);
+                paceElement.textContent = `${minutes}:${seconds.toString().padStart(2, '0')}`;
+            } else {
+                paceElement.textContent = "--:--";
+            }
+        }
+        
+        // Calcular distância entre dois pontos (em metros)
+        function calculateDistance(lat1, lon1, lat2, lon2) {
+            const R = 6371e3; // raio da Terra em metros
+            const φ1 = lat1 * Math.PI/180;
+            const φ2 = lat2 * Math.PI/180;
+            const Δφ = (lat2-lat1) * Math.PI/180;
+            const Δλ = (lon2-lon1) * Math.PI/180;
+            
+            const a = Math.sin(Δφ/2) * Math.sin(Δφ/2) +
+                      Math.cos(φ1) * Math.cos(φ2) *
+                      Math.sin(Δλ/2) * Math.sin(Δλ/2);
+            const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a));
+            
+            return R * c;
+        }
+        
+        // Iniciar temporizador
+        function startTimer() {
+            if (timerInterval) clearInterval(timerInterval);
+            
+            startTime = new Date();
+            if (pauseTime > 0) {
+                startTime = new Date(startTime.getTime() - pauseTime);
+                pauseTime = 0;
+            }
+            
+            timerInterval = setInterval(() => {
+                const now = new Date();
+                const elapsed = new Date(now - startTime - totalPausedTime);
+                
+                const hours = elapsed.getUTCHours().toString().padStart(2, '0');
+                const minutes = elapsed.getUTCMinutes().toString().padStart(2, '0');
+                const seconds = elapsed.getUTCSeconds().toString().padStart(2, '0');
+                
+                timeElement.textContent = `${hours}:${minutes}:${seconds}`;
+            }, 1000);
+        }
+        
+        // Pausar temporizador
+        function pauseTimer() {
+            if (timerInterval) {
+                clearInterval(timerInterval);
+                timerInterval = null;
+                pauseTime = new Date() - startTime - totalPausedTime;
+            }
+        }
+        
+        // Iniciar rastreamento
+        function startTracking() {
+            if (isTracking) return;
+            
+            isTracking = true;
+            mapContainer.classList.add('pulse');
+            
+            // Iniciar watchPosition
+            watchId = navigator.geolocation.watchPosition(
+                updatePosition,
+                handleGeolocationError,
+                {
+                    enableHighAccuracy: true,
+                    maximumAge: 10000,
+                    timeout: 5000
+                }
+            );
+            
+            // Atualizar UI
+            btnStart.disabled = true;
+            btnPause.disabled = false;
+            btnReset.disabled = true;
+            btnStop.disabled = false;
+            btnShare.disabled = true;
+            
+            startTimer();
+        }
+        
+        // Pausar rastreamento
+        function pauseTracking() {
+            if (!isTracking || isPaused) return;
+            
+            isPaused = true;
+            mapContainer.classList.remove('pulse');
+            
+            // Atualizar UI
+            btnPause.disabled = true;
+            btnStart.disabled = false;
+            btnStart.textContent = '▶ Continuar';
+            
+            pauseTimer();
+        }
+        
+        // Resetar rastreamento
+        function resetTracking() {
+            // Parar temporizador
+            if (timerInterval) {
+                clearInterval(timerInterval);
+                timerInterval = null;
+            }
+            
+            // Resetar variáveis
+            isTracking = false;
+            isPaused = false;
+            pathPoints = [];
+            startTime = null;
+            pauseTime = 0;
+            totalPausedTime = 0;
+            totalDistance = 0;
+            staticMapUrl = '';
+            
+            // Remover marcadores e caminho
+            pathLayer.clearLayers();
+            markersLayer.clearLayers();
+            startMarker = null;
+            currentPositionMarker = null;
+            
+            // Parar watchPosition se estiver ativo
+            if (watchId) {
+                navigator.geolocation.clearWatch(watchId);
+                watchId = null;
+            }
+            
+            // Resetar UI
+            distanceElement.textContent = '0.00';
+            timeElement.textContent = '00:00:00';
+            paceElement.textContent = '--:--';
+            speedElement.textContent = '0.0';
+            pathStartElement.textContent = 'Início: --:--:--';
+            pathPointsElement.textContent = 'Pontos: 0';
+            
+            btnStart.disabled = false;
+            btnPause.disabled = true;
+            btnReset.disabled = true;
+            btnStop.disabled = true;
+            btnShare.disabled = true;
+            btnStart.textContent = '▶ Iniciar';
+            
+            mapContainer.classList.remove('pulse');
+        }
+        
+        // Parar rastreamento (mantém os dados)
+        function stopTracking() {
+            isTracking = false;
+            isPaused = false;
+            mapContainer.classList.remove('pulse');
+            
+            // Parar watchPosition
+            if (watchId) {
+                navigator.geolocation.clearWatch(watchId);
+                watchId = null;
+            }
+            
+            // Parar temporizador
+            if (timerInterval) {
+                clearInterval(timerInterval);
+                timerInterval = null;
+            }
+            
+            // Gerar URL do mapa estático
+            generateStaticMapUrl();
+            
+            // Atualizar UI
+            btnStart.disabled = false;
+            btnPause.disabled = true;
+            btnReset.disabled = false;
+            btnStop.disabled = true;
+            btnShare.disabled = false;
+            btnStart.textContent = '▶ Iniciar';
+        }
+        
+        // Gerar URL do mapa estático para compartilhamento
+        function generateStaticMapUrl() {
+            if (pathPoints.length < 1) {
+                staticMapUrl = '';
+                return;
+            }
+            
+            // Calcular centro do percurso
+            let minLat = pathPoints[0].lat, maxLat = pathPoints[0].lat;
+            let minLng = pathPoints[0].lng, maxLng = pathPoints[0].lng;
+            
+            pathPoints.forEach(point => {
+                minLat = Math.min(minLat, point.lat);
+                maxLat = Math.max(maxLat, point.lat);
+                minLng = Math.min(minLng, point.lng);
+                maxLng = Math.max(maxLng, point.lng);
+            });
+            
+            const centerLat = (minLat + maxLat) / 2;
+            const centerLng = (minLng + maxLng) / 2;
+            
+            // Criar string de pontos para o polyline
+            const polylinePoints = pathPoints.map(p => `${p.lat},${p.lng}`).join('|');
+            
+            // Cor baseada no tipo de atividade
+            const color = activityType === 'run' ? '00c853' : '1e88e5';
+            
+            // Gerar URL do mapa estático usando OpenStreetMap
+            staticMapUrl = `https://maps.googleapis.com/maps/api/staticmap?` +
+                `center=${centerLat},${centerLng}` +
+                `&zoom=14` +
+                `&size=600x300` +
+                `&maptype=roadmap` +
+                `&path=color:0x${color}|weight:5|${polylinePoints}` +
+                `&markers=color:yellow|label:S|${pathPoints[0].lat},${pathPoints[0].lng}` +
+                `&markers=color:red|label:E|${pathPoints[pathPoints.length-1].lat},${pathPoints[pathPoints.length-1].lng}` +
+                `&key=YOUR_GOOGLE_MAPS_API_KEY`; // Substitua por sua chave API
+            
+            // Alternativa sem API key (usando OpenStreetMap)
+            // staticMapUrl = `https://static-maps.yandex.ru/1.x/?` +
+            //     `l=map` +
+            //     `&pl=${polylinePoints}` +
+            //     `&pt=${pathPoints[0].lat},${pathPoints[0].lng},pm2rdl1~${pathPoints[pathPoints.length-1].lat},${pathPoints[pathPoints.length-1].lng},pm2rdl2` +
+            //     `&size=600,300`;
+        }
+        
+        // Preparar mensagem para compartilhamento
+        function prepareShareMessage() {
+            if (pathPoints.length < 1) return '';
+            
+            const activityName = activityType === 'run' ? 'Corrida' : 'Caminhada';
+            const startTime = pathPoints[0].timestamp.toLocaleTimeString();
+            const endTime = pathPoints[pathPoints.length-1].timestamp.toLocaleTimeString();
+            const duration = timeElement.textContent;
+            const distance = distanceElement.textContent + ' km';
+            const pace = paceElement.textContent + ' min/km';
+            const avgSpeed = speedElement.textContent + ' km/h';
+            
+            let message = `🏃‍♂️ *${activityName} Registrada com ActiveTrack* 🏃‍♀️\n\n`;
+            message += `📅 *Data:* ${new Date().toLocaleDateString()}\n`;
+            message += `⏱ *Duração:* ${duration}\n`;
+            message += `🛣 *Distância:* ${distance}\n`;
+            message += `⚡ *Ritmo médio:* ${pace}\n`;
+            message += `🚀 *Velocidade média:* ${avgSpeed}\n`;
+            message += `🕒 *Início:* ${startTime}\n`;
+            message += `🕔 *Término:* ${endTime}\n\n`;
+            message += `📍 *Rota percorrida:*\n`;
+            
+            // Adicionar URL do mapa se disponível
+            if (staticMapUrl) {
+                message += `${staticMapUrl}\n\n`;
+            }
+            
+            message += `#ActiveTrack #${activityName}`;
+            
+            return message;
+        }
+        
+        // Compartilhar via WhatsApp
+        function shareOnWhatsApp() {
+            const message = prepareShareMessage();
+            
+            if (!message) {
+                alert('Nenhuma atividade para compartilhar.');
+                return;
+            }
+            
+            // Abrir modal para pré-visualização
+            shareMessage.value = message;
+            shareModal.style.display = 'flex';
+        }
+        
+        // Enviar mensagem pelo WhatsApp
+        function sendWhatsAppMessage() {
+            const message = encodeURIComponent(shareMessage.value);
+            const whatsappUrl = `https://wa.me/?text=${message}`;
+            
+            // Fechar modal e abrir WhatsApp
+            shareModal.style.display = 'none';
+            window.open(whatsappUrl, '_blank');
+        }
+        
+        // Manipular erros de geolocalização
+        function handleGeolocationError(error) {
+            console.error('Erro de geolocalização:', error);
+            gpsIndicator.classList.remove('active');
+            
+            switch(error.code) {
+                case error.PERMISSION_DENIED:
+                    gpsText.textContent = "GPS negado pelo usuário";
+                    break;
+                case error.POSITION_UNAVAILABLE:
+                    gpsText.textContent = "Informação de localização indisponível";
+                    break;
+                case error.TIMEOUT:
+                    gpsText.textContent = "Tempo de resposta do GPS excedido";
+                    break;
+                case error.UNKNOWN_ERROR:
+                    gpsText.textContent = "Erro desconhecido no GPS";
+                    break;
+            }
+            
+            if (isTracking) {
+                pauseTracking();
+            }
+        }
+        
+        // Event Listeners
+        btnStart.addEventListener('click', startTracking);
+        btnPause.addEventListener('click', pauseTracking);
+        btnReset.addEventListener('click', resetTracking);
+        btnStop.addEventListener('click', stopTracking);
+        btnShare.addEventListener('click', shareOnWhatsApp);
+        
+        btnRun.addEventListener('click', () => {
+            activityType = 'run';
+            btnRun.classList.add('active');
+            btnWalk.classList.remove('active');
+            
+            // Atualizar cor do caminho se existir
+            if (pathPoints.length > 1) {
+                updatePath();
+            }
+        });
+        
+        btnWalk.addEventListener('click', () => {
+            activityType = 'walk';
+            btnWalk.classList.add('active');
+            btnRun.classList.remove('active');
+            
+            // Atualizar cor do caminho se existir
+            if (pathPoints.length > 1) {
+                updatePath();
+            }
+        });
+        
+        // Modal events
+        closeModal.addEventListener('click', () => {
+            shareModal.style.display = 'none';
+        });
+        
+        btnCancelShare.addEventListener('click', () => {
+            shareModal.style.display = 'none';
+        });
+        
+        btnConfirmShare.addEventListener('click', sendWhatsAppMessage);
+        
+        // Fechar modal ao clicar fora
+        shareModal.addEventListener('click', (e) => {
+            if (e.target === shareModal) {
+                shareModal.style.display = 'none';
+            }
+        });
+        
+        // Verificar suporte a geolocalização
+        if (!navigator.geolocation) {
+            alert("Seu navegador não suporta geolocalização. Este app não funcionará corretamente.");
+            gpsText.textContent = "GPS não suportado";
+        }
+        
+        // Inicializar o app
+        document.addEventListener('DOMContentLoaded', initMap);
+    </script>
+</body>
+</html>
